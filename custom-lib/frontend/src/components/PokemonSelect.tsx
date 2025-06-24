@@ -45,7 +45,7 @@ interface PokemonSelectProps {
 export const PokemonSelect: React.FC<PokemonSelectProps> = ({ onSelect }) => {
 	const [selected, setSelected] = useState<PokemonKey | "">("");
 	const [level, setLevel] = useState<number>(1);
-	const [selectedNature, setSelectedNature] = useState<NatureKey | "">("");
+	const [selectedNature, setSelectedNature] = useState<NatureKey | null>(null);
 	const [evs, setEvs] = useState<Record<StatKey, number>>(
 		statKeys.reduce(
 			(acc, k) => ({ ...acc, [k]: 0 }),
@@ -90,16 +90,9 @@ export const PokemonSelect: React.FC<PokemonSelectProps> = ({ onSelect }) => {
 			}));
 
 	const selectedPokemon = selected ? Pokedex[selected] : null;
-	const nature = selectedNature ? Natures[selectedNature] : null;
-
-	const statRows: { label: string; key: StatKey }[] = [
-		{ label: "HP", key: "hp" },
-		{ label: "Attack", key: "atk" },
-		{ label: "Defense", key: "def" },
-		{ label: "Sp. Atk", key: "spa" },
-		{ label: "Sp. Def", key: "spd" },
-		{ label: "Speed", key: "spe" },
-	];
+	const nature: Nature | null = selectedNature
+		? Natures[selectedNature]
+		: null;
 
 	return (
 		<div>
