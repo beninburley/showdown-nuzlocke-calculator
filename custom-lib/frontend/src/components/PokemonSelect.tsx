@@ -5,7 +5,39 @@ import { Natures } from "../../../../data/natures";
 
 type PokemonKey = keyof typeof Pokedex;
 type StatKey = keyof (typeof Pokedex)[PokemonKey]["baseStats"];
+type NatureKey = keyof typeof Natures;
+type Nature = (typeof Natures)[NatureKey];
 
+const statKeys: StatKey[] = ["hp", "atk", "def", "spa", "spd", "spe"];
+
+function calculateStat(
+	base: number,
+	iv: number,
+	ev: number,
+	level: number,
+	isHP: boolean,
+	nature: Nature | null,
+	statKey: StatKey
+): number {
+	if (isHP) {
+		return (
+			Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level) / 100) +
+			level +
+			10
+		);
+	} else {
+		const stat =
+			Math.floor(((2 * base + iv + Math.floor(ev / 4)) * level) / 100) + 5;
+		const mod = nature
+			? nature.plus === statKey
+				? 1.1
+				: nature.minus === statKey
+				? 0.9
+				: 1
+			: 1;
+		return Math.floor(stat * mod);
+	}
+}
 interface PokemonSelectProps {
 	onSelect?: (pokemonKey: PokemonKey) => void;
 }
@@ -14,6 +46,18 @@ export const PokemonSelect: React.FC<PokemonSelectProps> = ({ onSelect }) => {
 	const [selected, setSelected] = useState<PokemonKey | "">("");
 	const [level, setLevel] = useState<number>(1);
 	const [selectedNature, setSelectedNature] = useState<NatureKey | "">("");
+	const [evs, setEvs] = useState<Record<StatKey, number>>(
+		statKeys.reduce(
+			(acc, k) => ({ ...acc, [k]: 0 }),
+			{} as Record<StatKey, number>
+		)
+	);
+	const [ivs, setIvs] = useState<Record<StatKey, number>>(
+		statKeys.reduce(
+			(acc, k) => ({ ...acc, [k]: 0 }),
+			{} as Record<StatKey, number>
+		)
+	);
 
 	const entries = Object.entries(Pokedex) as [
 		PokemonKey,
@@ -32,8 +76,21 @@ export const PokemonSelect: React.FC<PokemonSelectProps> = ({ onSelect }) => {
 		setSelected(key);
 		onSelect?.(key);
 	};
+	const handleEvChange =
+		(key: StatKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+			setEvs((prev) => ({
+				...prev,
+				[key]: Math.max(0, Math.min(252, +e.target.value)),
+			}));
+	const handleIvChange =
+		(key: StatKey) => (e: React.ChangeEvent<HTMLInputElement>) =>
+			setIvs((prev) => ({
+				...prev,
+				[key]: Math.max(0, Math.min(31, +e.target.value)),
+			}));
 
 	const selectedPokemon = selected ? Pokedex[selected] : null;
+	const nature = selectedNature ? Natures[selectedNature] : null;
 
 	const statRows: { label: string; key: StatKey }[] = [
 		{ label: "HP", key: "hp" },
@@ -49,7 +106,7 @@ export const PokemonSelect: React.FC<PokemonSelectProps> = ({ onSelect }) => {
 			<select
 				value={selected}
 				onChange={handleChange}
-				className="form-select"
+				className="form-select mb-3"
 			>
 				<option value="" disabled>
 					— Select a Pokémon —
@@ -62,38 +119,40 @@ export const PokemonSelect: React.FC<PokemonSelectProps> = ({ onSelect }) => {
 			</select>
 
 			{selectedPokemon && (
-				<div className="card mt-3">
+				<div className="card">
 					<div className="card-header">{selectedPokemon.name}</div>
 					<div className="card-body">
-						<div className="mb-3">
-							<label className="form-label">Level</label>
-							<input
-								type="number"
-								className="form-control"
-								min={1}
-								max={100}
-								value={level}
-								onChange={(e) => setLevel(Number(e.target.value))}
-							/>
-						</div>
-						<div className="col">
-							<label className="form-label">Nature</label>
-							<select
-								className="form-select"
-								value={selectedNature}
-								onChange={(e) =>
-									setSelectedNature(e.target.value as NatureKey)
-								}
-							>
-								<option value="" disabled>
-									— Select Nature —
-								</option>
-								{natureEntries.map(([key, { name }]) => (
-									<option key={key} value={key}>
-										{name}
+						<div className="row mb-3">
+							<div className="col">
+								<label className="form-label">Level</label>
+								<input
+									type="number"
+									className="form-control"
+									min={1}
+									max={100}
+									value={level}
+									onChange={(e) => setLevel(+e.target.value)}
+								/>
+							</div>
+							<div className="col">
+								<label className="form-label">Nature</label>
+								<select
+									className="form-select"
+									value={selectedNature}
+									onChange={(e) =>
+										setSelectedNature(e.target.value as NatureKey)
+									}
+								>
+									<option value="" disabled>
+										— Select Nature —
 									</option>
-								))}
-							</select>
+									{natureEntries.map(([key, { name }]) => (
+										<option key={key} value={key}>
+											{name}
+										</option>
+									))}
+								</select>
+							</div>
 						</div>
 
 						<table className="table">
@@ -107,23 +166,37 @@ export const PokemonSelect: React.FC<PokemonSelectProps> = ({ onSelect }) => {
 								</tr>
 							</thead>
 							<tbody>
-								{statRows.map(({ label, key }) => (
+								{statKeys.map((key) => (
 									<tr key={key}>
-										<td>{label}</td>
+										<td>{key.toUpperCase()}</td>
 										<td>{selectedPokemon.baseStats[key]}</td>
 										<td>
 											<input
 												type="number"
 												className="form-control form-control-sm"
+												value={evs[key]}
+												onChange={handleEvChange(key)}
 											/>
 										</td>
 										<td>
 											<input
 												type="number"
 												className="form-control form-control-sm"
+												value={ivs[key]}
+												onChange={handleIvChange(key)}
 											/>
 										</td>
-										<td></td>
+										<td>
+											{calculateStat(
+												selectedPokemon.baseStats[key],
+												ivs[key],
+												evs[key],
+												level,
+												key === "hp",
+												nature,
+												key
+											)}
+										</td>
 									</tr>
 								))}
 							</tbody>
