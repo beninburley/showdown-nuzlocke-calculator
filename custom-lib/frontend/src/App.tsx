@@ -1,17 +1,17 @@
 import "./App.css";
-import { PokemonSelect } from "./components/PokemonSelect";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import TeamBuilderPage from "./pages/TeamBuilder";
 
 function App() {
-  const handlePokemon = () => {};
-
-  return (
-    <>
-      <div>
-        <h1>Choose your Pokémon</h1>
-        <PokemonSelect onSelect={handlePokemon} />
-      </div>
-    </>
-  );
+	return (
+		<>
+			<Router>
+				<Routes>
+					<Route path="/teambuilder" element={TeamBuilderPage()} />
+				</Routes>
+			</Router>
+		</>
+	);
 }
 
 export default App;
